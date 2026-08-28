@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#173f33" />
+    <title>KrishiAI | Farmer Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#dashboard"><span class="brand-mark">✦</span><span>Krishi<em>AI</em></span></a>
+        <nav aria-label="Main navigation"><a class="active" href="#dashboard">⌂ <span>Dashboard</span></a><a href="#scan">⌁ <span>Crop scan</span></a><a href="#advisory">☼ <span>Advisory</span></a><a href="#history">◴ <span>My scans</span></a></nav>
+        <div class="sidebar-foot"><div class="farmer-mini"><span>RK</span><div><b>Ramesh Kumar</b><small>Nashik, Maharashtra</small></div></div><p>Farmer-first intelligence for every field.</p></div>
+      </aside>
+      <main id="dashboard">
+        <header class="topbar"><div><p class="eyebrow">GOOD MORNING, RAMESH</p><h1>Your farm, <em>in focus.</em></h1></div><div class="header-actions"><label class="language-select">🌐 <select id="language" aria-label="Guidance language"><option value="en">English</option><option value="hi">हिंदी</option><option value="mr">मराठी</option></select></label><button class="avatar" aria-label="Farmer profile">RK</button></div></header>
+        <section class="hero-grid" id="scan">
+          <article class="scan-card"><div><p class="eyebrow">AI CROP SCREENING</p><h2>See a symptom.<br><em>Get a next step.</em></h2><p>Upload a clear crop photo for a quick demo health check with weather-aware guidance.</p><button class="primary" id="open-scanner">⌁ Scan a crop image</button></div><div class="leaf-art" aria-hidden="true"><span>⌁</span><i></i><b></b></div></article>
+          <article class="weather-card"><div class="card-head"><p class="eyebrow">FIELD WEATHER · NASHIK</p><span>● Live demo</span></div><div class="weather-main"><span class="weather-icon">☁</span><strong>31°</strong><div><b>Partly cloudy</b><small>Feels like 33°</small></div></div><div class="weather-stats"><span><b>78%</b>Humidity</span><span><b>12 km/h</b>Wind</span><span><b>30%</b>Rain chance</span></div><div class="weather-alert">⚠ Light rain possible tonight. Avoid overhead irrigation.</div></article>
+        </section>
+        <section class="section-title"><div><p class="eyebrow">FIELD SNAPSHOT</p><h2>What needs your attention</h2></div><span class="date">Thursday, 28 August</span></section>
+        <section class="insight-grid" id="advisory">
+          <article class="insight irrigation"><span class="insight-icon">💧</span><div><p class="eyebrow">IRRIGATION</p><h3>Water at the roots tomorrow</h3><p id="irrigation-copy">Soil moisture looks adequate today. If dry tomorrow morning, give light root-zone irrigation.</p></div><button class="icon-button" data-toast="Irrigation plan saved">↗</button></article>
+          <article class="insight advisory"><span class="insight-icon">✦</span><div><p class="eyebrow">SEASONAL ADVISORY</p><h3>Watch for leaf moisture</h3><p id="advisory-copy">High humidity can spread leaf disease. Check lower leaves after rain.</p></div><button class="icon-button" data-toast="Advisory opened">↗</button></article>
+          <article class="insight support"><span class="insight-icon">◉</span><div><p class="eyebrow">EXPERT SUPPORT</p><h3>Need a second opinion?</h3><p>Share a scan with your local agriculture officer before treatment.</p></div><button class="icon-button" data-toast="Expert support request prepared">↗</button></article>
+        </section>
+        <section class="lower-grid" id="history">
+          <article class="panel scans-panel"><div class="panel-title"><div><p class="eyebrow">RECENT SCANS</p><h2>Your crop health history</h2></div><button class="text-button" id="view-all">View all</button></div><div id="scans-list" class="scan-list"></div></article>
+          <article class="panel alerts-panel"><div class="panel-title"><div><p class="eyebrow">FIELD ALERTS</p><h2>Stay ahead</h2></div><span class="alert-count">2 new</span></div><div class="alert-item"><span class="alert-dot orange"></span><div><b>Humidity rising this evening</b><p>Check tomato leaves tomorrow morning.</p></div><time>Now</time></div><div class="alert-item"><span class="alert-dot blue"></span><div><b>Irrigation window opens</b><p>Root-zone watering recommended at 6–8 AM.</p></div><time>Tomorrow</time></div><button class="outline" id="mark-alerts">✓ Mark alerts as read</button></article>
+        </section>
+      </main>
+    </div>
+    <dialog id="scan-dialog"><form id="scan-form"><div class="modal-top"><div><p class="eyebrow">DEMO CROP SCREENING</p><h2>Check your crop</h2></div><button type="button" class="close" id="close-scanner" aria-label="Close">×</button></div><p class="modal-note">Upload a crop image to preview a demonstrative result. This is decision support—not a confirmed diagnosis.</p><label class="upload-zone" id="upload-zone"><input id="crop-image" type="file" accept="image/*" /><span id="preview-symbol">⌁</span><b id="upload-title">Choose a crop photo</b><small id="upload-help">Clear leaf photos work best · JPG, PNG</small><img id="image-preview" hidden alt="Crop photo preview" /></label><div class="form-row"><label>Crop<select id="crop"><option>Tomato</option><option>Potato</option><option>Cotton</option></select></label><label>Crop stage<select id="stage"><option>Vegetative</option><option>Flowering</option><option>Fruiting</option></select></label></div><button class="primary scan-submit" type="submit">Run demo health check →</button></form></dialog>
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
