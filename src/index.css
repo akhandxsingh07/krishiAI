@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .custom-glass {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(163, 177, 138, 0.18);
+    backdrop-filter: blur(12px);
+  }
+  .custom-glass-card {
+    background: rgba(18, 27, 18, 0.7);
+    border: 1px solid rgba(163, 177, 138, 0.15);
+    backdrop-filter: blur(10px);
+  }
+  .accent-text {
+    color: #a3b18a;
+  }
+  .border-soft {
+    border-color: rgba(163, 177, 138, 0.2);
+  }
+  .border-soft-subtle {
+    border-color: rgba(163, 177, 138, 0.12);
+  }
+  .disease-card:hover {
+    background: rgba(163, 177, 138, 0.08);
+  }
+}
+
+/* Hide scrollbar for clean horizontal scrollers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

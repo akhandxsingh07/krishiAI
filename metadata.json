@@ -1,0 +1,6 @@
+{
+  "name": "KrishiAI - Smart Agriculture & Crop Intelligence",
+  "description": "AI-powered agricultural assistant featuring crop disease detection, live weather intelligence, multilingual support in major Indian languages, irrigation guidance, and real-time farmer advisory.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
