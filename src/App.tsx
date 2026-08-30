@@ -84,7 +84,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a110a] text-[#f2f2e8] flex flex-col selection:bg-[#a3b18a] selection:text-[#0a110a] font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="krishiai-app min-h-screen text-[#f2f2e8] flex flex-col selection:bg-[#a3b18a] selection:text-[#0a110a] font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Top Navigation */}
       <Navbar
         currentLang={currentLang}
