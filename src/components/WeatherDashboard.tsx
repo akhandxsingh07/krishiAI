@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CloudSun,
   Wind,
@@ -33,8 +33,33 @@ export const WeatherDashboard: React.FC<WeatherDashboardProps> = ({
 }) => {
   const [selectedLoc, setSelectedLoc] = useState<AgriLocation>(POPULAR_AGRI_LOCATIONS[0]);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [allWeatherData, setAllWeatherData] = useState<Map<string, WeatherData>>(new Map());
+  const [loadingLocations, setLoadingLocations] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
 
   const t = (key: string) => getTranslation(currentLang, key);
+
+  // Fetch weather for all locations on mount and when language changes
+  useEffect(() => {
+    const fetchAllWeather = async () => {
+      setLoadingLocations(true);
+      const weatherMap = new Map<string, WeatherData>();
+      
+      for (const location of POPULAR_AGRI_LOCATIONS) {
+        try {
+          const weather = await fetchLiveAgriWeather(location.lat, location.lon, location.city, location.state);
+          weatherMap.set(location.city, weather);
+        } catch (error) {
+          console.error(`Failed to fetch weather for ${location.city}:`, error);
+        }
+      }
+      
+      setAllWeatherData(weatherMap);
+      setLoadingLocations(false);
+    };
+
+    fetchAllWeather();
+  }, [currentLang]);
 
   const handleSelectLocation = async (loc: AgriLocation) => {
     setSelectedLoc(loc);
@@ -84,46 +109,157 @@ export const WeatherDashboard: React.FC<WeatherDashboardProps> = ({
         </p>
       </div>
 
-      {/* District Selector & GPS Button */}
-      <div className="p-5 rounded-xl bg-[#121b12] border border-[#a3b18a]/20 shadow-2xl space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#a3b18a] uppercase tracking-wider">
-            <MapPin className="w-4 h-4 text-[#a3b18a]" />
-            <span>Select Agricultural District:</span>
-          </div>
-
-          <button
-            onClick={handleUseGPS}
-            disabled={isLocating}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141d14] hover:bg-[#1a241a] border border-[#a3b18a]/30 text-xs text-[#f2f2e8] font-semibold transition-colors self-start sm:self-auto uppercase tracking-wider text-[11px]"
-          >
-            <LocateFixed className={`w-3.5 h-3.5 text-[#a3b18a] ${isLocating ? 'animate-spin' : ''}`} />
-            <span>{isLocating ? 'Locating...' : 'Use My GPS Farm Location'}</span>
-          </button>
-        </div>
-
-        {/* Quick District Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-xs">
-          {POPULAR_AGRI_LOCATIONS.map((loc) => {
-            const isSelected = selectedLoc.city === loc.city;
-            return (
-              <button
-                key={loc.city}
-                onClick={() => handleSelectLocation(loc)}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap text-xs uppercase tracking-wider transition-all ${
-                  isSelected
-                    ? 'bg-[#a3b18a] text-[#0a110a] font-bold shadow-md'
-                    : 'bg-[#0a110a] hover:bg-[#1a241a] text-[#f2f2e8]/70 border border-[#a3b18a]/20'
-                }`}
-              >
-                {loc.city} ({loc.state})
-              </button>
-            );
-          })}
-        </div>
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          onClick={() => setViewMode('grid')}
+          className={`px-4 py-2 rounded-lg font-semibold text-xs uppercase tracking-wider transition-all ${
+            viewMode === 'grid'
+              ? 'bg-[#a3b18a] text-[#0a110a] shadow-md'
+              : 'bg-[#141d14] hover:bg-[#1a241a] text-[#f2f2e8]/70 border border-[#a3b18a]/20'
+          }`}
+        >
+          All Locations ({allWeatherData.size})
+        </button>
+        <button
+          onClick={() => setViewMode('detail')}
+          className={`px-4 py-2 rounded-lg font-semibold text-xs uppercase tracking-wider transition-all ${
+            viewMode === 'detail'
+              ? 'bg-[#a3b18a] text-[#0a110a] shadow-md'
+              : 'bg-[#141d14] hover:bg-[#1a241a] text-[#f2f2e8]/70 border border-[#a3b18a]/20'
+          }`}
+        >
+          Detailed View
+        </button>
       </div>
 
-      {weatherData && (
+      {/* Grid View - All Locations */}
+      {viewMode === 'grid' && (
+        <div className="space-y-4">
+          {loadingLocations ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center gap-2 text-[#a3b18a]">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading weather for all locations...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {POPULAR_AGRI_LOCATIONS.map((location) => {
+                const weather = allWeatherData.get(location.city);
+                
+                if (!weather) {
+                  return (
+                    <div
+                      key={location.city}
+                      className="p-4 rounded-xl bg-[#121b12] border border-red-600/30 text-center text-red-300/70 text-xs"
+                    >
+                      <p className="font-semibold">{location.city}, {location.state}</p>
+                      <p className="text-[11px] mt-1">Failed to load weather data</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={location.city}
+                    onClick={() => {
+                      setSelectedLoc(location);
+                      setViewMode('detail');
+                    }}
+                    className="p-4 rounded-xl bg-[#121b12] border border-[#a3b18a]/20 hover:border-[#a3b18a]/50 cursor-pointer hover:shadow-lg transition-all space-y-3"
+                  >
+                    <div>
+                      <p className="font-bold text-sm text-[#a3b18a]">{location.city}</p>
+                      <p className="text-[11px] text-[#f2f2e8]/50">{location.state}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-[#f2f2e8]">
+                        {weather.temp}°C
+                      </div>
+                      <p className="text-[10px] text-[#f2f2e8]/70">{weather.condition}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="flex items-center gap-1 text-[#f2f2e8]/60">
+                        <Wind className="w-3 h-3 text-[#a3b18a]" />
+                        <span>{weather.windSpeedKmH} km/h</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[#f2f2e8]/60">
+                        <Droplets className="w-3 h-3 text-blue-400" />
+                        <span>{weather.humidity}%</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[#f2f2e8]/60">
+                        <CloudRain className="w-3 h-3 text-blue-400" />
+                        <span>{weather.rainProbability}%</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[#f2f2e8]/60">
+                        <Thermometer className="w-3 h-3 text-amber-400" />
+                        <span>{weather.tempMax}°/{weather.tempMin}°</span>
+                      </div>
+                    </div>
+
+                    <div className={`text-[10px] font-bold px-2 py-1 rounded text-center uppercase tracking-wider ${
+                      weather.sprayAdvisory.status === 'Optimal'
+                        ? 'bg-[#a3b18a]/20 text-[#a3b18a] border border-[#a3b18a]/30'
+                        : weather.sprayAdvisory.status === 'Caution'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    }`}>
+                      {weather.sprayAdvisory.status}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Detail View - Selected Location */}
+      {viewMode === 'detail' && (
+        <div className="space-y-6">
+          {/* District Selector & GPS Button */}
+          <div className="p-5 rounded-xl bg-[#121b12] border border-[#a3b18a]/20 shadow-2xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#a3b18a] uppercase tracking-wider">
+                <MapPin className="w-4 h-4 text-[#a3b18a]" />
+                <span>Select Agricultural District:</span>
+              </div>
+
+              <button
+                onClick={handleUseGPS}
+                disabled={isLocating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141d14] hover:bg-[#1a241a] border border-[#a3b18a]/30 text-xs text-[#f2f2e8] font-semibold transition-colors self-start sm:self-auto uppercase tracking-wider text-[11px]"
+              >
+                <LocateFixed className={`w-3.5 h-3.5 text-[#a3b18a] ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Locating...' : 'Use My GPS Farm Location'}</span>
+              </button>
+            </div>
+
+            {/* Quick District Buttons */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-xs">
+              {POPULAR_AGRI_LOCATIONS.map((loc) => {
+                const isSelected = selectedLoc.city === loc.city;
+                return (
+                  <button
+                    key={loc.city}
+                    onClick={() => handleSelectLocation(loc)}
+                    className={`px-3 py-1.5 rounded-lg whitespace-nowrap text-xs uppercase tracking-wider transition-all ${
+                      isSelected
+                        ? 'bg-[#a3b18a] text-[#0a110a] font-bold shadow-md'
+                        : 'bg-[#0a110a] hover:bg-[#1a241a] text-[#f2f2e8]/70 border border-[#a3b18a]/20'
+                    }`}
+                  >
+                    {loc.city} ({loc.state})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {weatherData && (
         <div className="space-y-6">
           {/* Main Weather Metric Banner */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -301,6 +437,8 @@ export const WeatherDashboard: React.FC<WeatherDashboardProps> = ({
               ))}
             </div>
           </div>
+        </div>
+          )}
         </div>
       )}
     </div>
