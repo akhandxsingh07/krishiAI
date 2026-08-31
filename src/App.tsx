@@ -10,6 +10,7 @@ import { IrrigationAdvisor } from './components/IrrigationAdvisor';
 import { AIChatbot } from './components/AIChatbot';
 import { AuthModal } from './components/AuthModal';
 import { DocumentationView } from './components/DocumentationView';
+import { X402PaymentCard } from './components/X402PaymentCard';
 import { Footer } from './components/Footer';
 
 export default function App() {
@@ -85,6 +86,7 @@ export default function App() {
             <HeroBanner currentLang={currentLang} onSelectTab={setActiveTab} />
             <DiseaseScanner currentLang={currentLang} onAskChatbot={handleAskChatbotFromScan} />
             <WeatherDashboard currentLang={currentLang} weatherData={weatherData} onRefreshWeather={handleRefreshWeather} isLoading={isWeatherLoading} />
+            <X402PaymentCard />
           </div>
         )}
         {activeTab === 'scan' && <DiseaseScanner currentLang={currentLang} onAskChatbot={handleAskChatbotFromScan} />}
