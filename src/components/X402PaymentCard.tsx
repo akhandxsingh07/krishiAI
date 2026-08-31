@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, ExternalLink, Loader2, LockKeyhole, WalletCards, XCircle } from 'lucide-react';
 import { x402Client } from '@x402/core/client';
-import { registerExactAvmScheme } from '@x402/avm/exact/client';
+import { ExactAvmClient } from '@x402/avm';
 import { ALGORAND_TESTNET_CAIP2 } from '@x402/avm';
 import type { ClientAvmSigner } from '@x402/avm';
 import { useWallet } from '@txnlab/use-wallet-react';
@@ -101,21 +101,7 @@ export const X402PaymentCard: React.FC = () => {
       };
 
       const client = new x402Client({ schemes: [] });
-
-      registerExactAvmScheme(client, {
-        signer,
-        algodConfig: {
-          algodUrl: 'https://testnet-api.algonode.cloud',
-        },
-        networks: [ALGORAND_TESTNET_CAIP2],
-        policies: [
-          (_version, requirements) =>
-            requirements.filter((requirement) =>
-              requirement.network === ALGORAND_TESTNET_CAIP2 &&
-              Number(requirement.maxAmountRequired) <= 10_000,
-            ),
-        ],
-      });
+      client.register(ALGORAND_TESTNET_CAIP2, new ExactAvmClient(signer));
 
       const response = await client.fetch(`${window.location.origin}/api/premium-procurement`);
 
