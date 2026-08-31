@@ -15,8 +15,6 @@ export const X402_PREMIUM_PRICE_USD =
 
 export const X402_TESTNET_NETWORK = ALGORAND_TESTNET_CAIP2;
 export const X402_USDC_ASSET = USDC_TESTNET_ASA_ID;
-export const X402_PREMIUM_PRICE_MICRO_USDC =
-  process.env.X402_PREMIUM_PRICE_MICRO_USDC || '10000';
 
 export function isX402Configured(): boolean {
   const payTo = process.env.AVM_ADDRESS?.trim();
@@ -55,15 +53,13 @@ export function createX402Middleware() {
         scheme: 'exact',
         network: ALGORAND_TESTNET_CAIP2,
         payTo,
-        price: {
-          asset: USDC_TESTNET_ASA_ID,
-          amount: X402_PREMIUM_PRICE_MICRO_USDC,
-          extra: {
-            name: 'USDC',
-            decimals: 6,
-          },
-        },
+        price: X402_PREMIUM_PRICE_USD,
         maxTimeoutSeconds: 60,
+        extra: {
+          asset: USDC_TESTNET_ASA_ID,
+          name: 'USDC',
+          decimals: 6,
+        },
       },
       description:
         'KrishiAI premium procurement intelligence on Algorand Testnet',
