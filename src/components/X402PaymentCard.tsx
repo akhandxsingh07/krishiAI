@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+
 import {
   CheckCircle2,
   ExternalLink,
@@ -8,13 +9,15 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { useWallet } from '@txnlab/use-wallet-react';
+
 import { x402Client } from '@x402/core/client';
 import { x402HTTPClient } from '@x402/core/http';
 import { ExactAvmScheme } from '@x402/avm/exact/client';
 import type { ClientAvmSigner } from '@x402/avm';
-import { ALGORAND_TESTNET_CAIP2 } from '@x402/avm';
 
-import { useWallet } from '@txnlab/use-wallet-react';
+const ALGORAND_TESTNET_CAIP2 =
+  'algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=';
 
 type SettlementResponse = {
   success?: boolean;
@@ -65,7 +68,7 @@ export const X402PaymentCard: React.FC = () => {
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
-            'Unable to read x402 gateway status.'
+            'Unable to read x402 gateway status.',
           );
         }
 
@@ -81,7 +84,7 @@ export const X402PaymentCard: React.FC = () => {
           setError(
             err instanceof Error
               ? err.message
-              : 'Unable to read x402 status.'
+              : 'Unable to read x402 status.',
           );
         }
       });
@@ -96,7 +99,7 @@ export const X402PaymentCard: React.FC = () => {
 
     if (!wallet) {
       setError(
-        'Pera Wallet provider is not available.'
+        'Pera Wallet provider is not available.',
       );
       return;
     }
@@ -110,7 +113,7 @@ export const X402PaymentCard: React.FC = () => {
       setError(
         err instanceof Error
           ? err.message
-          : 'Wallet connection was cancelled.'
+          : 'Wallet connection was cancelled.',
       );
     } finally {
       setConnecting(false);
@@ -120,7 +123,7 @@ export const X402PaymentCard: React.FC = () => {
   const payAndUnlock = async () => {
     if (!activeAccount) {
       setError(
-        'Connect your Pera Wallet first.'
+        'Connect your Pera Wallet first.',
       );
       return;
     }
@@ -136,11 +139,11 @@ export const X402PaymentCard: React.FC = () => {
 
         signTransactions: async (
           txns,
-          indexesToSign
+          indexesToSign,
         ) => {
           return signTransactions(
             txns,
-            indexesToSign
+            indexesToSign,
           );
         },
       };
@@ -148,27 +151,24 @@ export const X402PaymentCard: React.FC = () => {
       /*
        * Create the x402 client.
        */
-     const coreClient = new x402Client();
+      const coreClient = new x402Client();
 
       /*
        * Register the Algorand Exact scheme.
-       *
-       * Your installed @x402/avm 2.24.0 exposes
-       * ExactAvmScheme as the client implementation.
        */
       coreClient.register(
         ALGORAND_TESTNET_CAIP2,
         new ExactAvmScheme(signer, {
           algodUrl:
             'https://testnet-api.algonode.cloud',
-        })
+        }),
       );
 
       /*
        * HTTP wrapper for the x402 payment flow.
        */
       const client = new x402HTTPClient(
-        coreClient
+        coreClient,
       );
 
       const resourceUrl =
@@ -192,12 +192,12 @@ export const X402PaymentCard: React.FC = () => {
           client.getPaymentRequiredResponse(
             (name) =>
               initialResponse.headers.get(name),
-            await initialResponse.json()
+            await initialResponse.json(),
           );
 
         const paymentPayload =
           await client.createPaymentPayload(
-            paymentRequired
+            paymentRequired,
           );
 
         response = await fetch(
@@ -205,9 +205,9 @@ export const X402PaymentCard: React.FC = () => {
           {
             headers:
               client.encodePaymentSignatureHeader(
-                paymentPayload
+                paymentPayload,
               ),
-          }
+          },
         );
       }
 
@@ -221,8 +221,8 @@ export const X402PaymentCard: React.FC = () => {
         throw new Error(
           `Payment request failed (${response.status}): ${body.slice(
             0,
-            240
-          )}`
+            240,
+          )}`,
         );
       }
 
@@ -238,29 +238,29 @@ export const X402PaymentCard: React.FC = () => {
       const decodedSettlement =
         client.getPaymentSettleResponse(
           (name) =>
-            response.headers.get(name)
+            response.headers.get(name),
         );
 
       setSettlement(
         decodedSettlement || {
           success: true,
-        }
+        },
       );
 
       setUnlockedData(
         data.recommendation ||
-          'Premium procurement intelligence unlocked.'
+          'Premium procurement intelligence unlocked.',
       );
     } catch (err) {
       console.error(
         'x402 payment error:',
-        err
+        err,
       );
 
       setError(
         err instanceof Error
           ? err.message
-          : 'x402 payment failed.'
+          : 'x402 payment failed.',
       );
     } finally {
       setLoading(false);
@@ -367,11 +367,11 @@ export const X402PaymentCard: React.FC = () => {
             <span className="px-2 py-1 rounded bg-[#141d14] border border-[#a3b18a]/20 font-mono">
               {activeAccount.address.slice(
                 0,
-                8
+                8,
               )}
               …
               {activeAccount.address.slice(
-                -6
+                -6,
               )}
             </span>
           )}
