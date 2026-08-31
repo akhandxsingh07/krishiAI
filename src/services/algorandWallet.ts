@@ -1,9 +1,7 @@
-import { NetworkId, WalletId, WalletManager } from '@txnlab/use-wallet';
+import { NetworkId, WalletManager } from '@txnlab/use-wallet';
+import { pera } from '@txnlab/use-wallet-pera';
 
 export const algorandWalletManager = new WalletManager({
-  wallets: [WalletId.PERA],
+  wallets: [pera()],
   defaultNetwork: NetworkId.TESTNET,
-  options: {
-    resetNetwork: true,
-  },
 });
