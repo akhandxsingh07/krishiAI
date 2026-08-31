@@ -16,6 +16,7 @@
     "@perawallet/connect": "^1.6.0",
     "@tailwindcss/vite": "^4.1.14",
     "@txnlab/use-wallet": "^5.0.0",
+    "@txnlab/use-wallet-pera": "^5.0.0",
     "@txnlab/use-wallet-react": "^5.0.0",
     "@x402/avm": "2.24.0",
     "@x402/core": "2.24.0",
