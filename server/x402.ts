@@ -2,7 +2,9 @@ import { paymentMiddleware, x402ResourceServer } from '@x402/express';
 import { ExactAvmScheme } from '@x402/avm/exact/server';
 import {
   ALGORAND_MAINNET_CAIP2,
+  ALGORAND_MAINNET_GENESIS_HASH,
   ALGORAND_TESTNET_CAIP2,
+  ALGORAND_TESTNET_GENESIS_HASH,
   USDC_TESTNET_ASA_ID,
 } from '@x402/avm';
 import { HTTPFacilitatorClient } from '@x402/core/server';
@@ -22,30 +24,24 @@ export const X402_USDC_ASSET =
   USDC_TESTNET_ASA_ID;
 
 /**
- * GoPlausible currently advertises Algorand networks in /supported using
- * the 32-character CAIP network reference, while @x402/avm uses the full
- * Algorand genesis-hash identifier. @x402/core compares these strings
- * literally during facilitator preflight, which otherwise makes a valid
- * Algorand route fail with "Facilitator does not support scheme exact".
- *
- * Normalize only the facilitator capability response. Payment verification
- * and settlement requests are passed through unchanged.
+ * GoPlausible may advertise Algorand networks in /supported using the
+ * complete genesis hash, while @x402/avm route configuration uses the
+ * canonical CAIP-2 identifier. @x402/core performs a literal capability
+ * comparison, so normalize only the facilitator capability response.
+ * Verification and settlement requests are left untouched.
  */
 function normalizeFacilitatorNetwork(network: string): string {
-  const [namespace, reference] = network.split(':', 2);
-
-  if (namespace !== 'algorand' || !reference) {
+  if (!network.startsWith('algorand:')) {
     return network;
   }
 
-  const testnetReference = ALGORAND_TESTNET_CAIP2.split(':', 2)[1];
-  const mainnetReference = ALGORAND_MAINNET_CAIP2.split(':', 2)[1];
+  const reference = network.slice('algorand:'.length);
 
-  if (reference === testnetReference.slice(0, 32)) {
+  if (reference === ALGORAND_TESTNET_GENESIS_HASH) {
     return ALGORAND_TESTNET_CAIP2;
   }
 
-  if (reference === mainnetReference.slice(0, 32)) {
+  if (reference === ALGORAND_MAINNET_GENESIS_HASH) {
     return ALGORAND_MAINNET_CAIP2;
   }
 
