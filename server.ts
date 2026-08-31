@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 
-// Load .env from project root
 dotenv.config({
   path: path.resolve(process.cwd(), '.env'),
 });
@@ -54,6 +53,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'KrishiAI Agri Engine',
+    hasApiKey: Boolean(process.env.GEMINI_API_KEY),
     aiEnabled: Boolean(process.env.GEMINI_API_KEY?.trim()),
     timestamp: new Date().toISOString(),
   });
@@ -172,35 +172,43 @@ Return ONLY valid JSON.
           properties: {
             cropName: {
               type: Type.STRING,
+              description: 'Crop name in target language',
             },
 
             diseaseName: {
               type: Type.STRING,
+              description: 'Disease or pest name',
             },
 
             scientificName: {
               type: Type.STRING,
+              description: 'Scientific name of pathogen',
             },
 
             confidence: {
               type: Type.NUMBER,
+              description: 'Confidence score percentage',
             },
 
             severity: {
               type: Type.STRING,
               enum: ['High', 'Medium', 'Low', 'Healthy'],
+              description: 'Severity level',
             },
 
             isHealthy: {
               type: Type.BOOLEAN,
+              description: 'True if plant has no disease',
             },
 
             affectedPart: {
               type: Type.STRING,
+              description: 'Plant part affected',
             },
 
             summary: {
               type: Type.STRING,
+              description: 'Farmer-friendly diagnostic summary',
             },
 
             symptomsObserved: {
@@ -215,11 +223,11 @@ Return ONLY valid JSON.
               items: {
                 type: Type.STRING,
               },
+              description: 'First 48-hour steps farmer must take',
             },
 
             chemicalRemedies: {
               type: Type.ARRAY,
-
               items: {
                 type: Type.OBJECT,
 
@@ -320,7 +328,6 @@ Return ONLY valid JSON.
       ...result,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error: any) {
     console.error('Crop analysis error:', error);
 
@@ -390,25 +397,18 @@ You are Krishi Saathi, an agricultural advisory assistant for KrishiAI.
 
 ${userContext}
 
-Help with:
+Your mission:
 
-- Crop diseases
-- Pest management
-- Fertilizers
-- Irrigation
-- Weather precautions
-- Crop planning
-- Organic farming
-- Soil management
-- Indian farming practices
-- Government agricultural schemes
-- Mandi and crop marketing
-
-Always respond in ${currentLang}.
-
-Give practical, clear and farmer-friendly answers.
-
-For chemical recommendations, advise the farmer to verify the product label and local agricultural guidance before application.
+- Provide clear, practical, accurate, and empathetic agronomic advice to Indian farmers.
+- Help with crop diseases, fertilizers, irrigation, pest management,
+  weather precautions, crop planning, organic farming, government schemes,
+  soil management and Mandi marketing.
+- Always communicate in ${currentLang}.
+- Use a warm, respectful and easy-to-understand tone.
+- Format responses with clean, scannable bullet points.
+- Keep explanations crisp, practical, and farmer-friendly.
+- For chemical recommendations, advise the farmer to verify the product
+  label and local agricultural guidance before application.
 `;
 
     const contents: any[] = [];
@@ -437,7 +437,6 @@ For chemical recommendations, advise the farmer to verify the product label and 
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-
       contents,
 
       config: {
@@ -455,7 +454,6 @@ For chemical recommendations, advise the farmer to verify the product label and 
       language,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error: any) {
     console.error('Chat error:', error);
 
@@ -521,21 +519,20 @@ app.post('/api/irrigation-advisory', (req, res) => {
         ? 1 + (temp - 28) * 0.025
         : 0.95;
 
-    const rainDeduction =
-      Math.min(
-        baseNeed * 0.8,
-        rainfallForecastMm * 4046
-      );
+    const rainDeduction = Math.min(
+      baseNeed * 0.8,
+      rainfallForecastMm * 4046
+    );
 
     const netWaterPerDay =
       Math.max(
         0,
         Math.round(
           baseNeed *
-          stageFactor *
-          soilFactor *
-          tempFactor -
-          rainDeduction
+            stageFactor *
+            soilFactor *
+            tempFactor -
+            rainDeduction
         )
       ) * Number(acres);
 
@@ -587,15 +584,21 @@ app.post('/api/irrigation-advisory', (req, res) => {
       growthStage,
       soilType,
       acres,
-      waterRequiredLitersPerDay: netWaterPerDay,
-      irrigationFrequencyHours: frequencyHours,
-      dripRunTimeHours: dripRunHours,
-      floodIrrigationHours: floodHours,
+      temp,
+      rainfallForecastMm,
+      baseNeed,
+      stageFactor,
+      soilFactor,
+      tempFactor,
+      rainDeduction,
+      netWaterPerDay,
+      dripRunHours,
+      floodHours,
+      frequencyHours,
       recommendation,
       savingsVsTraditionalPct: 38,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error: any) {
     return res.status(500).json({
       error: error?.message || String(error),
@@ -632,7 +635,6 @@ app.get('/api/download-zip', (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
-
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -641,9 +643,7 @@ async function startServer() {
     });
 
     app.use(vite.middlewares);
-
   } else {
-
     const distPath = path.join(
       process.cwd(),
       'dist'
