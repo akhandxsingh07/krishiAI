@@ -3,7 +3,6 @@ import { registerExactAvmScheme } from '@x402/avm/exact/server';
 import {
   ALGORAND_TESTNET_CAIP2,
   USDC_TESTNET_ASA_ID,
-  ALGORAND_ADDRESS_REGEX,
 } from '@x402/avm';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 
@@ -17,8 +16,7 @@ export const X402_TESTNET_NETWORK = ALGORAND_TESTNET_CAIP2;
 export const X402_USDC_ASSET = USDC_TESTNET_ASA_ID;
 
 export function isX402Configured(): boolean {
-  const payTo = process.env.AVM_ADDRESS?.trim();
-  return Boolean(payTo && ALGORAND_ADDRESS_REGEX.test(payTo));
+  return Boolean(process.env.AVM_ADDRESS?.trim());
 }
 
 export function createX402Middleware() {
@@ -27,13 +25,6 @@ export function createX402Middleware() {
   if (!payTo) {
     console.warn(
       '[x402] AVM_ADDRESS is not configured; the x402 premium route remains disabled.'
-    );
-    return null;
-  }
-
-  if (!ALGORAND_ADDRESS_REGEX.test(payTo)) {
-    console.error(
-      '[x402] AVM_ADDRESS is invalid; the x402 premium route remains disabled.'
     );
     return null;
   }
