@@ -19,6 +19,21 @@ import type { ClientAvmSigner } from '@x402/avm';
 const ALGORAND_TESTNET_CAIP2 =
   'algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=';
 
+/*
+ * The app UI runs on the core server (3001) and the x402 gateway runs on
+ * 3002. Keep the gateway URL configurable for deployment, while providing
+ * the correct local/LAN default for the current browser host.
+ */
+const getX402GatewayUrl = () => {
+  const configured = import.meta.env.VITE_X402_GATEWAY_URL?.trim();
+
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:3002`;
+};
+
 type SettlementResponse = {
   success?: boolean;
   transaction?: string;
@@ -63,8 +78,9 @@ export const X402PaymentCard: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const gatewayUrl = getX402GatewayUrl();
 
-    fetch('/api/x402/status')
+    fetch(`${gatewayUrl}/api/x402/status`)
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
@@ -148,14 +164,8 @@ export const X402PaymentCard: React.FC = () => {
         },
       };
 
-      /*
-       * Create the x402 client.
-       */
       const coreClient = new x402Client();
 
-      /*
-       * Register the Algorand Exact scheme.
-       */
       coreClient.register(
         ALGORAND_TESTNET_CAIP2,
         new ExactAvmScheme(signer, {
@@ -164,29 +174,19 @@ export const X402PaymentCard: React.FC = () => {
         }),
       );
 
-      /*
-       * HTTP wrapper for the x402 payment flow.
-       */
       const client = new x402HTTPClient(
         coreClient,
       );
 
       const resourceUrl =
-        `${window.location.origin}` +
+        `${getX402GatewayUrl()}` +
         '/api/premium-procurement';
 
-      /*
-       * First request.
-       */
       const initialResponse =
         await fetch(resourceUrl);
 
       let response = initialResponse;
 
-      /*
-       * If server requests payment,
-       * create the payment and retry.
-       */
       if (initialResponse.status === 402) {
         const paymentRequired =
           client.getPaymentRequiredResponse(
@@ -211,9 +211,6 @@ export const X402PaymentCard: React.FC = () => {
         );
       }
 
-      /*
-       * Check final response.
-       */
       if (!response.ok) {
         const body =
           await response.text();
@@ -226,15 +223,9 @@ export const X402PaymentCard: React.FC = () => {
         );
       }
 
-      /*
-       * Premium response.
-       */
       const data =
         await response.json();
 
-      /*
-       * Settlement response.
-       */
       const decodedSettlement =
         client.getPaymentSettleResponse(
           (name) =>
