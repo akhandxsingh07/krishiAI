@@ -1,5 +1,5 @@
 import { paymentMiddleware, x402ResourceServer } from '@x402/express';
-import { registerExactAvmScheme } from '@x402/avm/exact/server';
+import { ExactAvmScheme } from '@x402/avm/exact/server';
 import {
   ALGORAND_TESTNET_CAIP2,
   USDC_TESTNET_ASA_ID,
@@ -33,10 +33,10 @@ export function createX402Middleware() {
     url: X402_FACILITATOR_URL,
   });
 
-  const resourceServer = new x402ResourceServer(facilitatorClient);
-  registerExactAvmScheme(resourceServer, {
-    networks: [ALGORAND_TESTNET_CAIP2],
-  });
+  const resourceServer = new x402ResourceServer(facilitatorClient).register(
+    ALGORAND_TESTNET_CAIP2,
+    new ExactAvmScheme(),
+  );
 
   const routes = {
     'GET /api/premium-procurement': {
