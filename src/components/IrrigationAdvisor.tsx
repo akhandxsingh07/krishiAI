@@ -437,7 +437,7 @@ export const IrrigationAdvisor: React.FC<IrrigationAdvisorProps> = ({
                   </span>
 
                   <h3 className="text-2xl sm:text-3xl font-light font-serif text-[#f2f2e8] font-mono">
-                    {irrigationPlan.waterRequiredLitersPerDay.toLocaleString()}{' '}
+                    {(irrigationPlan.waterRequiredLitersPerDay ?? 0).toLocaleString()} 
                     Liters / Day
                   </h3>
                 </div>
