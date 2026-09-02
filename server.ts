@@ -35,6 +35,7 @@ function getAIClient(): GoogleGenAI | null {
     aiClient = new GoogleGenAI({
       apiKey,
       httpOptions: {
+        timeout: 120000,
         headers: {
           'User-Agent': 'krishiai-app',
         },
@@ -331,9 +332,29 @@ Return ONLY valid JSON.
   } catch (error: any) {
     console.error('Crop analysis error:', error);
 
+    const errorMessage = error?.message || String(error);
+    const isTimeout =
+      error?.name === 'AbortError' ||
+      /timeout|timed out|headers timeout|deadline/i.test(errorMessage);
+
+    const isTemporaryAIError =
+      isTimeout ||
+      error?.status === 503 ||
+      /503|UNAVAILABLE|high demand|temporarily unavailable/i.test(errorMessage);
+
+    if (isTemporaryAIError) {
+      return res.status(503).json({
+        error: 'AI diagnosis is temporarily unavailable. Please try again in a moment.',
+        retryable: true,
+        details: isTimeout
+          ? 'The AI service took too long to respond.'
+          : 'The AI service is temporarily unavailable.',
+      });
+    }
+
     return res.status(500).json({
       error: 'Failed to analyze crop image',
-      details: error?.message || String(error),
+      details: errorMessage,
     });
   }
 });
