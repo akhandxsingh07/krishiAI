@@ -19,8 +19,16 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // -------------------------------------------------------------
-// AI CLIENT
+// GEMINI MODELS & AI CLIENT WITH AUTO FAILOVER (404 & 429)
 // -------------------------------------------------------------
+
+// Active, fully supported Gemini 3.x production models
+const GEMINI_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.1-pro-preview',
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash',
+];
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -44,6 +52,60 @@ function getAIClient(): GoogleGenAI | null {
   }
 
   return aiClient;
+}
+
+/**
+ * Handles backoff on 503 and auto-fails over to the next model 
+ * when hitting 429 quota limits or 404 endpoint errors.
+ */
+async function generateContentWithRetry(
+  ai: GoogleGenAI,
+  requestPayload: any,
+  modelsToTry: string[] = GEMINI_MODELS,
+  maxRetriesPerModel = 2
+) {
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    let delay = 1000;
+
+    for (let attempt = 0; attempt < maxRetriesPerModel; attempt++) {
+      try {
+        console.log(`[Gemini API] Querying model: ${model} (Attempt ${attempt + 1})`);
+        return await ai.models.generateContent({
+          model,
+          ...requestPayload,
+        });
+      } catch (error: any) {
+        lastError = error;
+        const status = error?.status;
+        const errorMessage = error?.message || String(error);
+
+        const is503 = status === 503 || /503|UNAVAILABLE|high demand/i.test(errorMessage);
+        const is404 = status === 404 || /404|NOT_FOUND|no longer available/i.test(errorMessage);
+        const is429 = status === 429 || /429|RESOURCE_EXHAUSTED|quota|limit/i.test(errorMessage);
+
+        // Retry with backoff if server is temporarily overloaded (503)
+        if (is503 && attempt < maxRetriesPerModel - 1) {
+          console.warn(`[Gemini API] 503 Overload on ${model}. Retrying in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 2;
+          continue;
+        }
+
+        // On 429 Quota Exceeded or 404 Endpoint Not Found, immediately failover to next model
+        if (is429 || is404 || is503) {
+          console.warn(`[Gemini API] Model ${model} failed (${status || 'Error/Quota'}). Failing over to next model...`);
+          break;
+        }
+
+        // Throw non-retryable errors immediately (e.g. invalid auth key)
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('All available Gemini models failed or reached quota limits.');
 }
 
 // -------------------------------------------------------------
@@ -101,9 +163,9 @@ app.post('/api/analyze-crop', async (req, res) => {
       ta: 'Tamil (தமிழ்)',
       mr: 'Marathi (मराठी)',
       gu: 'Gujarati (ગુજરાતી)',
-      kn: 'Kannada (ಕನ್ನಡ)',
+      kn: 'Kannada (ਕನ್ನಡ)',
       ml: 'Malayalam (മലയാളം)',
-      or: 'Odia (ଓଡ଼ିଆ)',
+      or: 'Odia (ଓଡ଼ਿଆ)',
     };
 
     const targetLang = languageMap[language] || 'English';
@@ -147,169 +209,80 @@ All farmer-facing text must be in ${targetLang}.
 Return ONLY valid JSON.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
-
-      contents: {
-        parts: [
+    const response = await generateContentWithRetry(
+      ai,
+      {
+        contents: [
+          prompt,
           {
             inlineData: {
               mimeType,
               data: cleanBase64,
             },
           },
-          {
-            text: prompt,
-          },
         ],
-      },
-
-      config: {
-        responseMimeType: 'application/json',
-
-        responseSchema: {
-          type: Type.OBJECT,
-
-          properties: {
-            cropName: {
-              type: Type.STRING,
-              description: 'Crop name in target language',
-            },
-
-            diseaseName: {
-              type: Type.STRING,
-              description: 'Disease or pest name',
-            },
-
-            scientificName: {
-              type: Type.STRING,
-              description: 'Scientific name of pathogen',
-            },
-
-            confidence: {
-              type: Type.NUMBER,
-              description: 'Confidence score percentage',
-            },
-
-            severity: {
-              type: Type.STRING,
-              enum: ['High', 'Medium', 'Low', 'Healthy'],
-              description: 'Severity level',
-            },
-
-            isHealthy: {
-              type: Type.BOOLEAN,
-              description: 'True if plant has no disease',
-            },
-
-            affectedPart: {
-              type: Type.STRING,
-              description: 'Plant part affected',
-            },
-
-            summary: {
-              type: Type.STRING,
-              description: 'Farmer-friendly diagnostic summary',
-            },
-
-            symptomsObserved: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.STRING,
-              },
-            },
-
-            immediateActions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.STRING,
-              },
-              description: 'First 48-hour steps farmer must take',
-            },
-
-            chemicalRemedies: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-
-                properties: {
-                  chemical: {
-                    type: Type.STRING,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              cropName: { type: Type.STRING },
+              diseaseName: { type: Type.STRING },
+              scientificName: { type: Type.STRING },
+              confidence: { type: Type.NUMBER },
+              severity: { type: Type.STRING, enum: ['High', 'Medium', 'Low', 'Healthy'] },
+              isHealthy: { type: Type.BOOLEAN },
+              affectedPart: { type: Type.STRING },
+              summary: { type: Type.STRING },
+              symptomsObserved: { type: Type.ARRAY, items: { type: Type.STRING } },
+              immediateActions: { type: Type.ARRAY, items: { type: Type.STRING } },
+              chemicalRemedies: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    chemical: { type: Type.STRING },
+                    dosage: { type: Type.STRING },
+                    applicationMethod: { type: Type.STRING },
                   },
-
-                  dosage: {
-                    type: Type.STRING,
-                  },
-
-                  applicationMethod: {
-                    type: Type.STRING,
-                  },
+                  required: ['chemical', 'dosage', 'applicationMethod'],
                 },
-
-                required: [
-                  'chemical',
-                  'dosage',
-                  'applicationMethod',
-                ],
               },
-            },
-
-            organicRemedies: {
-              type: Type.ARRAY,
-
-              items: {
-                type: Type.OBJECT,
-
-                properties: {
-                  remedy: {
-                    type: Type.STRING,
+              organicRemedies: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    remedy: { type: Type.STRING },
+                    preparation: { type: Type.STRING },
+                    application: { type: Type.STRING },
                   },
-
-                  preparation: {
-                    type: Type.STRING,
-                  },
-
-                  application: {
-                    type: Type.STRING,
-                  },
+                  required: ['remedy', 'preparation', 'application'],
                 },
-
-                required: [
-                  'remedy',
-                  'preparation',
-                  'application',
-                ],
               },
+              irrigationPrecaution: { type: Type.STRING },
+              weatherAdvice: { type: Type.STRING },
             },
-
-            irrigationPrecaution: {
-              type: Type.STRING,
-            },
-
-            weatherAdvice: {
-              type: Type.STRING,
-            },
+            required: [
+              'cropName',
+              'diseaseName',
+              'scientificName',
+              'confidence',
+              'severity',
+              'isHealthy',
+              'affectedPart',
+              'summary',
+              'symptomsObserved',
+              'immediateActions',
+              'chemicalRemedies',
+              'organicRemedies',
+              'irrigationPrecaution',
+              'weatherAdvice',
+            ],
           },
-
-          required: [
-            'cropName',
-            'diseaseName',
-            'scientificName',
-            'confidence',
-            'severity',
-            'isHealthy',
-            'affectedPart',
-            'summary',
-            'symptomsObserved',
-            'immediateActions',
-            'chemicalRemedies',
-            'organicRemedies',
-            'irrigationPrecaution',
-            'weatherAdvice',
-          ],
         },
-      },
-    });
+      }
+    );
 
     const responseText = response.text || '{}';
 
@@ -336,6 +309,16 @@ Return ONLY valid JSON.
     const isTimeout =
       error?.name === 'AbortError' ||
       /timeout|timed out|headers timeout|deadline/i.test(errorMessage);
+
+    const isQuotaExhausted =
+      error?.status === 429 || /429|RESOURCE_EXHAUSTED|quota/i.test(errorMessage);
+
+    if (isQuotaExhausted) {
+      return res.status(429).json({
+        error: 'Daily AI free tier limits have been reached across available models. Please wait for reset or enable billing.',
+        retryable: false,
+      });
+    }
 
     const isTemporaryAIError =
       isTimeout ||
@@ -395,9 +378,9 @@ app.post('/api/chat', async (req, res) => {
       ta: 'Tamil (தமிழ்)',
       mr: 'Marathi (मराठी)',
       gu: 'Gujarati (ગુજરાતી)',
-      kn: 'Kannada (ಕನ್ನಡ)',
+      kn: 'Kannada (ਕನ್ನಡ)',
       ml: 'Malayalam (മലയാളം)',
-      or: 'Odia (ଓଡ଼ିଆ)',
+      or: 'Odia (ଓଡ଼ਿਆ)',
     };
 
     const currentLang = languageMap[language] || 'English';
@@ -456,15 +439,16 @@ Your mission:
       ],
     });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents,
-
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
-    });
+    const response = await generateContentWithRetry(
+      ai,
+      {
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      }
+    );
 
     const reply =
       response.text ||
