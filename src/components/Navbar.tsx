@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'weather', label: 'Weather', icon: CloudSun },
     { id: 'irrigation', label: 'Irrigation', icon: Droplets },
     { id: 'chatbot', label: 'Saathi', icon: MessageSquareText, highlight: true },
-    { id: 'docs', label: 'Docs', icon: FileText },
+    
   ];
 
   const currentLanguageObj = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang) || SUPPORTED_LANGUAGES[0];

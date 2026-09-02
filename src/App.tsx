@@ -94,7 +94,7 @@ export default function App() {
         {activeTab === 'weather' && <WeatherDashboard currentLang={currentLang} weatherData={weatherData} onRefreshWeather={handleRefreshWeather} isLoading={isWeatherLoading} />}
         {activeTab === 'irrigation' && <IrrigationAdvisor currentLang={currentLang} weatherData={weatherData} />}
         {activeTab === 'chatbot' && <AIChatbot currentLang={currentLang} userProfile={userProfile} initialPrompt={chatbotInitialPrompt} onClearInitialPrompt={() => setChatbotInitialPrompt(undefined)} />}
-        {activeTab === 'docs' && <DocumentationView />}
+        
       </main>
 
       <Footer currentLang={currentLang} onSelectTab={setActiveTab} />
